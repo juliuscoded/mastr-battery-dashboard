@@ -36,7 +36,7 @@ jobs:
       env:
         MASTR_API_KEY: ${{ secrets.MASTR_API_KEY }}
       run: |
-        python collect_dashboard_data.py --min-power 1000 --min-capacity 1000
+        python collect_dashboard_data.py --min-power 5000 --min-capacity 5000
         
     - name: Debug - Check results
       run: |

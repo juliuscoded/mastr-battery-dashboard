@@ -68,7 +68,7 @@ def preprocess_data(df):
         return df
     
     # Convert date strings to datetime
-    date_columns = ['DatumLetzteAktualisierung', 'EinheitRegistrierungsdatum', 'InbetriebnahmeDatum']
+    date_columns = ['DatumLetzteAktualisierung', 'EinheitRegistrierungsdatum', 'InbetriebnahmeDatum', 'GeplantesInbetriebnahmeDatum']
     for col in date_columns:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col].str.replace('/Date(', '').str.replace(')/', ''), unit='ms', errors='coerce')
@@ -88,6 +88,9 @@ def preprocess_data(df):
     # Create derived columns
     df['Power_MW'] = df['Bruttoleistung'] / 1000  # Convert kW to MW
     df['Capacity_MWh'] = df['NutzbareSpeicherkapazitaet'] / 1000  # Convert kWh to MWh
+    
+    # Calculate Duration (Capacity / Power) in hours
+    df['Duration_hours'] = df['Capacity_MWh'] / df['Power_MW']
     
     # Create size categories
     df['Power_Category'] = pd.cut(
@@ -126,10 +129,13 @@ def create_map(df_filtered):
             'AnlagenbetreiberName': True,
             'Power_MW': ':.1f',
             'Capacity_MWh': ':.1f',
+            'Duration_hours': ':.1f',
             'Batterietechnologie': True,
             'BetriebsStatusName': True,
             'Bundesland': True,
             'Gemeinde': True,
+            'NetzbetreiberName': True,
+            'GeplantesInbetriebnahmeDatum': True,
             'Breitengrad': False,
             'Laengengrad': False
         },
@@ -218,6 +224,16 @@ def create_charts(df_filtered):
             labels={'x': 'Number of Units', 'y': 'Bundesland'}
         )
         charts['bundesland'] = fig_bundesland
+        
+        # Duration distribution histogram
+        fig_duration = px.histogram(
+            df_filtered,
+            x='Duration_hours',
+            nbins=20,
+            title="Duration Distribution (Hours)",
+            labels={'Duration_hours': 'Duration (Hours)', 'count': 'Number of Units'}
+        )
+        charts['duration'] = fig_duration
     
     return charts
 
@@ -269,6 +285,21 @@ def main():
     owner_options = ['All'] + list(df['AnlagenbetreiberName'].unique())
     selected_owner = st.sidebar.selectbox("Owner", owner_options)
     
+    # Network Operator filter
+    st.sidebar.markdown("### Network Operator")
+    network_operator_options = ['All'] + list(df['NetzbetreiberName'].unique())
+    selected_network_operator = st.sidebar.selectbox("Network Operator", network_operator_options)
+    
+    # Duration filter
+    st.sidebar.markdown("### Duration (Hours)")
+    duration_min, duration_max = st.sidebar.slider(
+        "Duration Range",
+        min_value=float(df['Duration_hours'].min()),
+        max_value=float(df['Duration_hours'].max()),
+        value=(float(df['Duration_hours'].min()), float(df['Duration_hours'].max())),
+        step=0.1
+    )
+    
     # Apply filters
     df_filtered = df.copy()
     
@@ -291,6 +322,14 @@ def main():
     if selected_owner != 'All':
         df_filtered = df_filtered[df_filtered['AnlagenbetreiberName'] == selected_owner]
     
+    if selected_network_operator != 'All':
+        df_filtered = df_filtered[df_filtered['NetzbetreiberName'] == selected_network_operator]
+    
+    df_filtered = df_filtered[
+        (df_filtered['Duration_hours'] >= duration_min) & 
+        (df_filtered['Duration_hours'] <= duration_max)
+    ]
+    
     # Display filtered count
     st.sidebar.markdown(f"### 📊 Results")
     st.sidebar.markdown(f"**{len(df_filtered)}** batteries found")
@@ -305,7 +344,7 @@ def main():
     stats = create_summary_stats(df_filtered)
     
     # Display metrics in columns
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         st.metric("Total Units", f"{stats['Total Units']:,}")
@@ -318,6 +357,10 @@ def main():
     
     with col4:
         st.metric("Average Power", f"{stats['Average Power (MW)']:.1f} MW")
+    
+    with col5:
+        avg_duration = df_filtered['Duration_hours'].mean()
+        st.metric("Avg Duration", f"{avg_duration:.1f} h")
     
     # Interactive map
     st.markdown("## 📍 Interactive Map")
@@ -338,7 +381,13 @@ def main():
         with col2:
             st.plotly_chart(charts['technology'], use_container_width=True)
         
-        st.plotly_chart(charts['bundesland'], use_container_width=True)
+        col3, col4 = st.columns(2)
+        
+        with col3:
+            st.plotly_chart(charts['bundesland'], use_container_width=True)
+            
+        with col4:
+            st.plotly_chart(charts['duration'], use_container_width=True)
     
     # Detailed data table
     st.markdown("## 📋 Detailed Data")
@@ -346,20 +395,23 @@ def main():
     # Select columns to display
     display_columns = [
         'EinheitName', 'AnlagenbetreiberName', 'BetriebsStatusName', 
-        'Power_MW', 'Capacity_MWh', 'Bundesland', 'Gemeinde', 'Batterietechnologie'
+        'Power_MW', 'Capacity_MWh', 'Duration_hours', 'Bundesland', 'Gemeinde', 
+        'Batterietechnologie', 'NetzbetreiberName', 'GeplantesInbetriebnahmeDatum'
     ]
     
     # Filter and display data
     display_df = df_filtered[display_columns].copy()
     display_df['Power_MW'] = display_df['Power_MW'].round(2)
     display_df['Capacity_MWh'] = display_df['Capacity_MWh'].round(2)
+    display_df['Duration_hours'] = display_df['Duration_hours'].round(2)
     
     st.dataframe(
         display_df,
         use_container_width=True,
         column_config={
             "Power_MW": st.column_config.NumberColumn("Power (MW)", format="%.2f"),
-            "Capacity_MWh": st.column_config.NumberColumn("Capacity (MWh)", format="%.2f")
+            "Capacity_MWh": st.column_config.NumberColumn("Capacity (MWh)", format="%.2f"),
+            "Duration_hours": st.column_config.NumberColumn("Duration (h)", format="%.2f")
         }
     )
     
