@@ -32,9 +32,11 @@ def fetch_all_batteries(api_key: str,
     # Combine criteria into one OData filter string (all battery technologies):
     # 727: Lithium-Batterie, 728: Blei-Batterie, 729: Redox-Flow-Batterie, 
     # 730: Hochtemperaturbatterie, 731: Nickel-Cadmium- / Nickel-Metallhydridbatterie, 732: Sonstige Batterie
+    # Stromspeichertechnologie = 524 ensures we only get battery storage, not pumped hydro or other storage types
     flt = (
         f"Bruttoleistung der Einheit~gt~{min_brutto_kw - 1}"
         f"~and~Nutzbare Speicherkapazität in kWh~gt~{min_speicher_kwh - 1}"
+        f"~and~Stromspeichertechnologie~eq~524"
         f"~and~(Batterietechnologie~eq~727~or~Batterietechnologie~eq~728~or~Batterietechnologie~eq~729~or~Batterietechnologie~eq~730~or~Batterietechnologie~eq~731~or~Batterietechnologie~eq~732)"
     )
     
