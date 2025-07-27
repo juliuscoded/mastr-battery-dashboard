@@ -48,19 +48,15 @@ def load_battery_data():
         
         # Use the most recent file
         latest_file = sorted(data_files)[-1]
-        st.write(f"Loading data from: {latest_file}")
         
         with open(latest_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
         # Convert to DataFrame
         df = pd.DataFrame(data)
-        st.write(f"Loaded DataFrame shape: {df.shape}")
         
         # Clean and preprocess data
         df = preprocess_data(df)
-        st.write(f"After preprocessing shape: {df.shape}")
-        st.write(f"Duration_hours in columns: {'Duration_hours' in df.columns}")
         
         return df
     except Exception as e:
@@ -123,6 +119,28 @@ def create_map(df_filtered):
         st.warning("No battery locations with coordinates found in the filtered data.")
         return
     
+    # Create hover_data with only existing columns
+    hover_columns = {
+        'EinheitName': True,
+        'AnlagenbetreiberName': True,
+        'Power_MW': ':.1f',
+        'Capacity_MWh': ':.1f',
+        'Batterietechnologie': True,
+        'BetriebsStatusName': True,
+        'Bundesland': True,
+        'Gemeinde': True,
+        'Breitengrad': False,
+        'Laengengrad': False
+    }
+    
+    # Add optional columns if they exist
+    if 'Duration_hours' in df_map.columns:
+        hover_columns['Duration_hours'] = ':.1f'
+    if 'NetzbetreiberNamen' in df_map.columns:
+        hover_columns['NetzbetreiberNamen'] = True
+    if 'GeplantesInbetriebnahmeDatum' in df_map.columns:
+        hover_columns['GeplantesInbetriebnahmeDatum'] = True
+    
     # Create the map
     fig = px.scatter_mapbox(
         df_map,
@@ -131,21 +149,7 @@ def create_map(df_filtered):
         size='Power_MW',
         color='BetriebsStatusName',
         hover_name='EinheitName',
-        hover_data={
-            'EinheitName': True,
-            'AnlagenbetreiberName': True,
-            'Power_MW': ':.1f',
-            'Capacity_MWh': ':.1f',
-            'Duration_hours': ':.1f',
-            'Batterietechnologie': True,
-            'BetriebsStatusName': True,
-            'Bundesland': True,
-            'Gemeinde': True,
-            'NetzbetreiberNamen': True,
-            'GeplantesInbetriebnahmeDatum': True,
-            'Breitengrad': False,
-            'Laengengrad': False
-        },
+        hover_data=hover_columns,
         color_discrete_map={
             'In Betrieb': '#2E8B57',
             'In Planung': '#FFD700',
@@ -249,20 +253,10 @@ def main():
     st.markdown('<h1 class="main-header">🔋 German Battery Storage Dashboard</h1>', unsafe_allow_html=True)
     st.markdown("Interactive visualization of German battery storage data from MaStR (Marktstammdatenregister)")
     
-    # Cache clearing button for debugging
-    if st.button("🔄 Clear Cache & Reload Data"):
-        st.cache_data.clear()
-        st.rerun()
-    
     # Load data
     df = load_battery_data()
     if df is None:
         st.stop()
-    
-    # Debug: Show available columns
-    st.sidebar.markdown("### Debug Info")
-    st.sidebar.write(f"Available columns: {list(df.columns)}")
-    st.sidebar.write(f"Data shape: {df.shape}")
     
     # Sidebar filters
     st.sidebar.markdown("## 🔍 Filters")
