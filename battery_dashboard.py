@@ -254,15 +254,6 @@ def main():
     st.sidebar.write(f"Available columns: {list(df.columns)}")
     st.sidebar.write(f"Data shape: {df.shape}")
     
-    # Ensure Duration_hours column exists (fallback if preprocessing failed)
-    if 'Duration_hours' not in df.columns:
-        st.sidebar.write("Creating Duration_hours column...")
-        # Calculate Duration (Capacity / Power) in hours
-        # Handle division by zero and NaN values
-        df['Duration_hours'] = df['Capacity_MWh'] / df['Power_MW'].replace(0, float('nan'))
-        df['Duration_hours'] = df['Duration_hours'].fillna(0)  # Replace NaN with 0
-        st.sidebar.write("Duration_hours column created!")
-    
     # Sidebar filters
     st.sidebar.markdown("## 🔍 Filters")
     
@@ -305,6 +296,15 @@ def main():
     st.sidebar.markdown("### Network Operator")
     network_operator_options = ['All'] + list(df['NetzbetreiberNamen'].unique())
     selected_network_operator = st.sidebar.selectbox("Network Operator", network_operator_options)
+    
+    # Ensure Duration_hours column exists (fallback if preprocessing failed)
+    if 'Duration_hours' not in df.columns:
+        st.sidebar.write("Creating Duration_hours column...")
+        # Calculate Duration (Capacity / Power) in hours
+        # Handle division by zero and NaN values
+        df['Duration_hours'] = df['Capacity_MWh'] / df['Power_MW'].replace(0, float('nan'))
+        df['Duration_hours'] = df['Duration_hours'].fillna(0)  # Replace NaN with 0
+        st.sidebar.write("Duration_hours column created!")
     
     # Duration filter
     st.sidebar.markdown("### Duration (Hours)")
