@@ -48,14 +48,19 @@ def load_battery_data():
         
         # Use the most recent file
         latest_file = sorted(data_files)[-1]
+        st.write(f"Loading data from: {latest_file}")
+        
         with open(latest_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
         # Convert to DataFrame
         df = pd.DataFrame(data)
+        st.write(f"Loaded DataFrame shape: {df.shape}")
         
         # Clean and preprocess data
         df = preprocess_data(df)
+        st.write(f"After preprocessing shape: {df.shape}")
+        st.write(f"Duration_hours in columns: {'Duration_hours' in df.columns}")
         
         return df
     except Exception as e:
@@ -243,6 +248,11 @@ def main():
     # Header
     st.markdown('<h1 class="main-header">🔋 German Battery Storage Dashboard</h1>', unsafe_allow_html=True)
     st.markdown("Interactive visualization of German battery storage data from MaStR (Marktstammdatenregister)")
+    
+    # Cache clearing button for debugging
+    if st.button("🔄 Clear Cache & Reload Data"):
+        st.cache_data.clear()
+        st.rerun()
     
     # Load data
     df = load_battery_data()
