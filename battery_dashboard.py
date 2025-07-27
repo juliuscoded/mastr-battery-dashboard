@@ -90,7 +90,9 @@ def preprocess_data(df):
     df['Capacity_MWh'] = df['NutzbareSpeicherkapazitaet'] / 1000  # Convert kWh to MWh
     
     # Calculate Duration (Capacity / Power) in hours
-    df['Duration_hours'] = df['Capacity_MWh'] / df['Power_MW']
+    # Handle division by zero and NaN values
+    df['Duration_hours'] = df['Capacity_MWh'] / df['Power_MW'].replace(0, float('nan'))
+    df['Duration_hours'] = df['Duration_hours'].fillna(0)  # Replace NaN with 0
     
     # Create size categories
     df['Power_Category'] = pd.cut(
@@ -247,6 +249,11 @@ def main():
     if df is None:
         st.stop()
     
+    # Debug: Show available columns
+    st.sidebar.markdown("### Debug Info")
+    st.sidebar.write(f"Available columns: {list(df.columns)}")
+    st.sidebar.write(f"Data shape: {df.shape}")
+    
     # Sidebar filters
     st.sidebar.markdown("## 🔍 Filters")
     
@@ -292,6 +299,12 @@ def main():
     
     # Duration filter
     st.sidebar.markdown("### Duration (Hours)")
+    
+    # Ensure Duration_hours column exists
+    if 'Duration_hours' not in df.columns:
+        st.error("Duration_hours column not found in data. Please check data preprocessing.")
+        return
+    
     duration_min, duration_max = st.sidebar.slider(
         "Duration Range",
         min_value=float(df['Duration_hours'].min()),
