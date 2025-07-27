@@ -17,7 +17,7 @@ def fetch_all_batteries(api_key: str,
     """
     Fetch all battery storage units for the dashboard with lower thresholds
     """
-    logger.info(f"Starting fetch with filters: Bruttoleistung > {min_brutto_kw-1}, Speicherkapazität > {min_speicher_kwh-1}, Batterietechnologie = 727")
+    logger.info(f"Starting fetch with filters: Bruttoleistung > {min_brutto_kw-1}, Speicherkapazität > {min_speicher_kwh-1}, All Battery Technologies")
     
     BASE_URL = (
         "https://www.marktstammdatenregister.de"
@@ -29,11 +29,13 @@ def fetch_all_batteries(api_key: str,
         "Accept": "application/json",
     }
 
-    # Combine criteria into one OData filter string:
+    # Combine criteria into one OData filter string (all battery technologies):
+    # 727: Lithium-Batterie, 728: Blei-Batterie, 729: Redox-Flow-Batterie, 
+    # 730: Hochtemperaturbatterie, 731: Nickel-Cadmium- / Nickel-Metallhydridbatterie, 732: Sonstige Batterie
     flt = (
         f"Bruttoleistung der Einheit~gt~{min_brutto_kw - 1}"
         f"~and~Nutzbare Speicherkapazität in kWh~gt~{min_speicher_kwh - 1}"
-        f"~and~Batterietechnologie~eq~727"
+        f"~and~(Batterietechnologie~eq~727~or~Batterietechnologie~eq~728~or~Batterietechnologie~eq~729~or~Batterietechnologie~eq~730~or~Batterietechnologie~eq~731~or~Batterietechnologie~eq~732)"
     )
     
     logger.info(f"Using filter: {flt}")
@@ -92,13 +94,13 @@ def main():
     batteries = fetch_all_batteries(api_key, args.min_power, args.min_capacity, args.page_size)
     
     # Ensure we save in the current working directory
-    out_file = os.path.join(os.getcwd(), f"all_batterie_speicher_>={args.min_power}kW_{args.min_capacity}kWh.json")
+    out_file = os.path.join(os.getcwd(), f"all_batterie_speicher_all_tech_>={args.min_power}kW_{args.min_capacity}kWh.json")
     
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(batteries, f, ensure_ascii=False, indent=2)
 
     print(f"✅ Retrieved {len(batteries)} units → {out_file}")
-    print(f"📊 This data is ready for the Streamlit dashboard!")
+    print(f"📊 This data includes all battery technologies and is ready for the Streamlit dashboard!")
 
 if __name__ == "__main__":
     main() 
