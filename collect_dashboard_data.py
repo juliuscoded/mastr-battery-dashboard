@@ -11,8 +11,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def fetch_all_batteries(api_key: str,
-                        min_brutto_kw: int = 10000,  # Lower threshold for dashboard
-                        min_speicher_kwh: int = 10000,  # Lower threshold for dashboard
+                        min_brutto_kw: int = 4999,  # Lower threshold for dashboard
+                        min_speicher_kwh: int = 4999,  # Lower threshold for dashboard
                         page_size: int = 1000) -> list:
     """
     Fetch all battery storage units for the dashboard with lower thresholds
