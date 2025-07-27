@@ -119,55 +119,57 @@ def create_map(df_filtered):
         st.warning("No battery locations with coordinates found in the filtered data.")
         return
     
-    # Create hover_data with only existing columns
+    # Ensure we have the required columns
+    required_columns = ['Breitengrad', 'Laengengrad', 'Power_MW', 'BetriebsStatusName', 'EinheitName']
+    missing_columns = [col for col in required_columns if col not in df_map.columns]
+    if missing_columns:
+        st.error(f"Missing required columns for map: {missing_columns}")
+        return
+    
+    # Create a simplified hover_data with only essential columns
     hover_columns = {
         'EinheitName': True,
-        'AnlagenbetreiberName': True,
         'Power_MW': ':.1f',
         'Capacity_MWh': ':.1f',
-        'Batterietechnologie': True,
         'BetriebsStatusName': True,
-        'Bundesland': True,
-        'Gemeinde': True,
-        'Breitengrad': False,
-        'Laengengrad': False
+        'Bundesland': True
     }
     
-    # Add optional columns if they exist
+    # Only add columns that definitely exist
+    safe_columns = ['AnlagenbetreiberName', 'Batterietechnologie', 'Gemeinde']
+    for col in safe_columns:
+        if col in df_map.columns:
+            hover_columns[col] = True
+    
+    # Add Duration_hours if it exists
     if 'Duration_hours' in df_map.columns:
         hover_columns['Duration_hours'] = ':.1f'
-    if 'NetzbetreiberNamen' in df_map.columns:
-        hover_columns['NetzbetreiberNamen'] = True
-    if 'GeplantesInbetriebnahmeDatum' in df_map.columns:
-        hover_columns['GeplantesInbetriebnahmeDatum'] = True
     
-    # Create the map
-    fig = px.scatter_mapbox(
-        df_map,
-        lat='Breitengrad',
-        lon='Laengengrad',
-        size='Power_MW',
-        color='BetriebsStatusName',
-        hover_name='EinheitName',
-        hover_data=hover_columns,
-        color_discrete_map={
-            'In Betrieb': '#2E8B57',
-            'In Planung': '#FFD700',
-            'Vorübergehend stillgelegt': '#FF6347',
-            'Endgültig stillgelegt': '#8B0000'
-        },
-        zoom=6,
-        center={'lat': 51.1657, 'lon': 10.4515},  # Center of Germany
-        title="German Battery Storage Locations"
-    )
-    
-    fig.update_layout(
-        mapbox_style="carto-positron",
-        height=600,
-        margin={"r":0,"t":30,"l":0,"b":0}
-    )
-    
-    return fig
+    # Create the map with minimal configuration
+    try:
+        fig = px.scatter_mapbox(
+            df_map,
+            lat='Breitengrad',
+            lon='Laengengrad',
+            size='Power_MW',
+            color='BetriebsStatusName',
+            hover_name='EinheitName',
+            hover_data=hover_columns,
+            zoom=6,
+            center={'lat': 51.1657, 'lon': 10.4515},  # Center of Germany
+            title="German Battery Storage Locations"
+        )
+        
+        fig.update_layout(
+            mapbox_style="carto-positron",
+            height=600,
+            margin={"r":0,"t":30,"l":0,"b":0}
+        )
+        
+        return fig
+    except Exception as e:
+        st.error(f"Error creating map: {e}")
+        return None
 
 def create_summary_stats(df_filtered):
     """Create summary statistics"""
@@ -253,10 +255,22 @@ def main():
     st.markdown('<h1 class="main-header">🔋 German Battery Storage Dashboard</h1>', unsafe_allow_html=True)
     st.markdown("Interactive visualization of German battery storage data from MaStR (Marktstammdatenregister)")
     
+    # Temporary cache clearing button
+    if st.button("🔄 Clear Cache"):
+        st.cache_data.clear()
+        st.rerun()
+    
     # Load data
     df = load_battery_data()
     if df is None:
         st.stop()
+    
+    # Temporary debug info
+    st.sidebar.markdown("### Debug Info")
+    st.sidebar.write(f"Data shape: {df.shape}")
+    st.sidebar.write(f"Duration_hours in columns: {'Duration_hours' in df.columns}")
+    st.sidebar.write(f"Power_MW in columns: {'Power_MW' in df.columns}")
+    st.sidebar.write(f"Capacity_MWh in columns: {'Capacity_MWh' in df.columns}")
     
     # Sidebar filters
     st.sidebar.markdown("## 🔍 Filters")
