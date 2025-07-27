@@ -134,7 +134,7 @@ def create_map(df_filtered):
             'BetriebsStatusName': True,
             'Bundesland': True,
             'Gemeinde': True,
-            'NetzbetreiberName': True,
+            'NetzbetreiberNamen': True,
             'GeplantesInbetriebnahmeDatum': True,
             'Breitengrad': False,
             'Laengengrad': False
@@ -287,7 +287,7 @@ def main():
     
     # Network Operator filter
     st.sidebar.markdown("### Network Operator")
-    network_operator_options = ['All'] + list(df['NetzbetreiberName'].unique())
+    network_operator_options = ['All'] + list(df['NetzbetreiberNamen'].unique())
     selected_network_operator = st.sidebar.selectbox("Network Operator", network_operator_options)
     
     # Duration filter
@@ -323,7 +323,7 @@ def main():
         df_filtered = df_filtered[df_filtered['AnlagenbetreiberName'] == selected_owner]
     
     if selected_network_operator != 'All':
-        df_filtered = df_filtered[df_filtered['NetzbetreiberName'] == selected_network_operator]
+        df_filtered = df_filtered[df_filtered['NetzbetreiberNamen'] == selected_network_operator]
     
     df_filtered = df_filtered[
         (df_filtered['Duration_hours'] >= duration_min) & 
@@ -396,7 +396,7 @@ def main():
     display_columns = [
         'EinheitName', 'AnlagenbetreiberName', 'BetriebsStatusName', 
         'Power_MW', 'Capacity_MWh', 'Duration_hours', 'Bundesland', 'Gemeinde', 
-        'Batterietechnologie', 'NetzbetreiberName', 'GeplantesInbetriebnahmeDatum'
+        'Batterietechnologie', 'NetzbetreiberNamen', 'GeplantesInbetriebnahmeDatum'
     ]
     
     # Filter and display data
