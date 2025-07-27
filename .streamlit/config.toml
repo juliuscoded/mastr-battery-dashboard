@@ -15,4 +15,7 @@ primaryColor = "#2E8B57"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F0F2F6"
 textColor = "#262730"
-font = "sans serif" 
+font = "sans serif"
+
+[logger]
+level = "info" 
