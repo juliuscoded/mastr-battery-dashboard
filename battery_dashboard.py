@@ -255,22 +255,10 @@ def main():
     st.markdown('<h1 class="main-header">🔋 German Battery Storage Dashboard</h1>', unsafe_allow_html=True)
     st.markdown("Interactive visualization of German battery storage data from MaStR (Marktstammdatenregister)")
     
-    # Temporary cache clearing button
-    if st.button("🔄 Clear Cache"):
-        st.cache_data.clear()
-        st.rerun()
-    
     # Load data
     df = load_battery_data()
     if df is None:
         st.stop()
-    
-    # Temporary debug info
-    st.sidebar.markdown("### Debug Info")
-    st.sidebar.write(f"Data shape: {df.shape}")
-    st.sidebar.write(f"Duration_hours in columns: {'Duration_hours' in df.columns}")
-    st.sidebar.write(f"Power_MW in columns: {'Power_MW' in df.columns}")
-    st.sidebar.write(f"Capacity_MWh in columns: {'Capacity_MWh' in df.columns}")
     
     # Sidebar filters
     st.sidebar.markdown("## 🔍 Filters")
@@ -427,27 +415,40 @@ def main():
     # Detailed data table
     st.markdown("## 📋 Detailed Data")
     
-    # Select columns to display
-    display_columns = [
+    # Select columns to display (only include columns that exist)
+    desired_columns = [
         'EinheitName', 'AnlagenbetreiberName', 'BetriebsStatusName', 
         'Power_MW', 'Capacity_MWh', 'Duration_hours', 'Bundesland', 'Gemeinde', 
         'Batterietechnologie', 'NetzbetreiberNamen', 'GeplantesInbetriebnahmeDatum'
     ]
     
+    # Filter to only include columns that exist in the DataFrame
+    display_columns = [col for col in desired_columns if col in df_filtered.columns]
+    
     # Filter and display data
     display_df = df_filtered[display_columns].copy()
-    display_df['Power_MW'] = display_df['Power_MW'].round(2)
-    display_df['Capacity_MWh'] = display_df['Capacity_MWh'].round(2)
-    display_df['Duration_hours'] = display_df['Duration_hours'].round(2)
+    
+    # Round numeric columns if they exist
+    if 'Power_MW' in display_df.columns:
+        display_df['Power_MW'] = display_df['Power_MW'].round(2)
+    if 'Capacity_MWh' in display_df.columns:
+        display_df['Capacity_MWh'] = display_df['Capacity_MWh'].round(2)
+    if 'Duration_hours' in display_df.columns:
+        display_df['Duration_hours'] = display_df['Duration_hours'].round(2)
+    
+    # Create column config dynamically
+    column_config = {}
+    if 'Power_MW' in display_df.columns:
+        column_config["Power_MW"] = st.column_config.NumberColumn("Power (MW)", format="%.2f")
+    if 'Capacity_MWh' in display_df.columns:
+        column_config["Capacity_MWh"] = st.column_config.NumberColumn("Capacity (MWh)", format="%.2f")
+    if 'Duration_hours' in display_df.columns:
+        column_config["Duration_hours"] = st.column_config.NumberColumn("Duration (h)", format="%.2f")
     
     st.dataframe(
         display_df,
         use_container_width=True,
-        column_config={
-            "Power_MW": st.column_config.NumberColumn("Power (MW)", format="%.2f"),
-            "Capacity_MWh": st.column_config.NumberColumn("Capacity (MWh)", format="%.2f"),
-            "Duration_hours": st.column_config.NumberColumn("Duration (h)", format="%.2f")
-        }
+        column_config=column_config
     )
     
     # Footer
