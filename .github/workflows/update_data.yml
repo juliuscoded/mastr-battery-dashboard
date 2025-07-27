@@ -53,13 +53,18 @@ jobs:
     - name: Check for changes
       id: check_changes
       run: |
-        if git diff --quiet; then
+        # Check for new untracked JSON files
+        if git ls-files --others --exclude-standard | grep -q "\.json$"; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+          echo "Changes detected - new JSON files found"
+          git ls-files --others --exclude-standard | grep "\.json$"
+        elif ! git diff --quiet; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+          echo "Changes detected - modified files found"
+          git diff --name-only
+        else
           echo "changes=false" >> $GITHUB_OUTPUT
           echo "No changes detected"
-        else
-          echo "changes=true" >> $GITHUB_OUTPUT
-          echo "Changes detected"
-          git diff --name-only
         fi
         
     - name: Commit and push if changes
