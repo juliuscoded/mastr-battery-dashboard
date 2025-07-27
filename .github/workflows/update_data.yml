@@ -76,4 +76,6 @@ jobs:
       run: |
         git add *.json
         git commit -m "🤖 Auto-update battery data - $(date +'%Y-%m-%d')"
+        echo "Attempting to push to repository..."
+        git remote -v
         git push 
