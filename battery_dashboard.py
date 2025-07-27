@@ -7,6 +7,16 @@ import json
 import os
 from datetime import datetime
 
+# Battery technology mapping
+BATTERY_TECH_MAPPING = {
+    727: "Lithium-Batterie",
+    728: "Blei-Batterie", 
+    729: "Redox-Flow-Batterie",
+    730: "Hochtemperaturbatterie",
+    731: "Nickel-Cadmium- / Nickel-Metallhydridbatterie",
+    732: "Sonstige Batterie"
+}
+
 # Page configuration
 st.set_page_config(
     page_title="German Battery Storage Dashboard",
@@ -95,6 +105,10 @@ def preprocess_data(df):
     df['Duration_hours'] = df['Capacity_MWh'] / df['Power_MW'].replace(0, float('nan'))
     df['Duration_hours'] = df['Duration_hours'].fillna(0)  # Replace NaN with 0
     
+    # Add battery technology name
+    if 'Batterietechnologie' in df.columns:
+        df['BatteryTechnologyName'] = df['Batterietechnologie'].map(BATTERY_TECH_MAPPING).fillna('Unbekannt')
+    
     # Create size categories
     df['Power_Category'] = pd.cut(
         df['Power_MW'], 
@@ -136,7 +150,7 @@ def create_map(df_filtered):
     }
     
     # Only add columns that definitely exist
-    safe_columns = ['AnlagenbetreiberName', 'Batterietechnologie', 'Gemeinde']
+    safe_columns = ['AnlagenbetreiberName', 'BatteryTechnologyName', 'Gemeinde']
     for col in safe_columns:
         if col in df_map.columns:
             hover_columns[col] = True
@@ -218,14 +232,25 @@ def create_charts(df_filtered):
         charts['status'] = fig_status
         
         # Technology distribution pie chart
-        tech_counts = df_filtered['Batterietechnologie'].value_counts()
-        fig_tech = px.pie(
-            values=tech_counts.values,
-            names=tech_counts.index,
-            title="Battery Technology Distribution",
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
-        charts['technology'] = fig_tech
+        if 'BatteryTechnologyName' in df_filtered.columns:
+            tech_counts = df_filtered['BatteryTechnologyName'].value_counts()
+            fig_tech = px.pie(
+                values=tech_counts.values,
+                names=tech_counts.index,
+                title="Battery Technology Distribution",
+                color_discrete_sequence=px.colors.qualitative.Pastel
+            )
+            charts['technology'] = fig_tech
+        else:
+            # Fallback to original Batterietechnologie if name not available
+            tech_counts = df_filtered['Batterietechnologie'].value_counts()
+            fig_tech = px.pie(
+                values=tech_counts.values,
+                names=tech_counts.index,
+                title="Battery Technology Distribution (Codes)",
+                color_discrete_sequence=px.colors.qualitative.Pastel
+            )
+            charts['technology'] = fig_tech
         
         # Top Bundesländer bar chart
         bundesland_counts = df_filtered['Bundesland'].value_counts().head(10)
@@ -303,6 +328,14 @@ def main():
     network_operator_options = ['All'] + list(df['NetzbetreiberNamen'].unique())
     selected_network_operator = st.sidebar.selectbox("Network Operator", network_operator_options)
     
+    # Battery Technology filter
+    st.sidebar.markdown("### Battery Technology")
+    if 'BatteryTechnologyName' in df.columns:
+        tech_options = ['All'] + sorted(list(df['BatteryTechnologyName'].unique()))
+        selected_technology = st.sidebar.selectbox("Battery Technology", tech_options)
+    else:
+        selected_technology = 'All'
+    
     # Ensure Duration_hours column exists (fallback if preprocessing failed)
     if 'Duration_hours' not in df.columns:
         st.sidebar.write("Creating Duration_hours column...")
@@ -347,6 +380,9 @@ def main():
     
     if selected_network_operator != 'All':
         df_filtered = df_filtered[df_filtered['NetzbetreiberNamen'] == selected_network_operator]
+    
+    if selected_technology != 'All':
+        df_filtered = df_filtered[df_filtered['BatteryTechnologyName'] == selected_technology]
     
     df_filtered = df_filtered[
         (df_filtered['Duration_hours'] >= duration_min) & 
@@ -419,11 +455,15 @@ def main():
     desired_columns = [
         'EinheitName', 'AnlagenbetreiberName', 'BetriebsStatusName', 
         'Power_MW', 'Capacity_MWh', 'Duration_hours', 'Bundesland', 'Gemeinde', 
-        'Batterietechnologie', 'NetzbetreiberNamen', 'GeplantesInbetriebnahmeDatum'
+        'BatteryTechnologyName', 'NetzbetreiberNamen', 'GeplantesInbetriebnahmeDatum'
     ]
     
     # Filter to only include columns that exist in the DataFrame
     display_columns = [col for col in desired_columns if col in df_filtered.columns]
+    
+    # Add Batterietechnologie as fallback if BatteryTechnologyName doesn't exist
+    if 'BatteryTechnologyName' not in display_columns and 'Batterietechnologie' in df_filtered.columns:
+        display_columns.append('Batterietechnologie')
     
     # Filter and display data
     display_df = df_filtered[display_columns].copy()
