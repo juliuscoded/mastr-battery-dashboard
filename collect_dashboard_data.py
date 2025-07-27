@@ -37,7 +37,6 @@ def fetch_all_batteries(api_key: str,
         f"Bruttoleistung der Einheit~gt~{min_brutto_kw - 1}"
         f"~and~Nutzbare Speicherkapazität in kWh~gt~{min_speicher_kwh - 1}"
         f"~and~Stromspeichertechnologie~eq~524"
-        f"~and~(Batterietechnologie~eq~727~or~Batterietechnologie~eq~728~or~Batterietechnologie~eq~729~or~Batterietechnologie~eq~730~or~Batterietechnologie~eq~731~or~Batterietechnologie~eq~732)"
     )
     
     logger.info(f"Using filter: {flt}")
@@ -73,8 +72,14 @@ def fetch_all_batteries(api_key: str,
             logger.error(f"Error fetching page {page}: {e}")
             break
 
+    # Filter for battery technologies in Python code
+    battery_tech_codes = [727, 728, 729, 730, 731, 732]
+    filtered_units = [unit for unit in all_units if unit.get('Batterietechnologie') in battery_tech_codes]
+    
     logger.info(f"Total units retrieved: {len(all_units)}")
-    return all_units
+    logger.info(f"Battery technology units after filtering: {len(filtered_units)}")
+    
+    return filtered_units
 
 def main():
     parser = argparse.ArgumentParser(description='Collect comprehensive battery data for dashboard')
